@@ -1,0 +1,48 @@
+; # dig @192.168.50.30 -p 53 SRV _myservice._tcp.local
+
+$TTL     604800
+$ORIGIN  local.
+@       IN      SOA     local. hostmaster.local. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@                         IN      RP      hostmaster@mail.local
+@                         IN      NS      ns.local.
+@                         IN      MX      10 mail.local.
+@                         IN      A       192.168.88.1
+localhost                 IN      A       127.0.0.1
+localhost                 IN      AAAA    ::1
+*                         IN      CNAME   @
+hostmaster.passwd.ns      IN      TXT     "hostmaster:x:14:12:Host Master:/var/mail:/sbin/nologin"
+hostmaster.uid.ns         IN      TXT     "hostmaster:x:14:12:Host Master:/var/mail:/sbin/nologin"
+hostmaster.group.ns       IN      TXT     "hostmaster:12:hostmaster,postmaster"
+12.gid.ns                 IN      TXT     "hostmaster:x:12"
+b._dns-sd._udp            IN      PTR     @   ;  b = browse domain
+lb._dns-sd._udp           IN      PTR     @   ; lb = legacy browse domain
+_services._dns-sd._tcp.@  IN	    PTR	    _http._tcp
+_services._dns-sd._tcp.@	IN      PTR	    _myservice._tcp
+_services._dns-sd._tcp.@	IN      PTR	    _socks5._tcp
+_http._tcp.@              IN      PTR     _myservice._tcp
+_myservice._tcp.@	        IN      TXT     "http_url='https://myservice.local'"
+$GENERATE  1-3  _myservice._tcp  IN  SRV  0  5  8080 host$1
+_socks5._tcp.@	          IN      TXT     "http_url='socks5://proxy.local'"
+_socks5._tcp.@            IN      SRV     0  0  8123 vrrp1.@
+vrrp1                     IN      A       192.168.88.10    ; VIP in keepalived
+$GENERATE  2-4 host$.dhcp-static  IN      A       192.168.88.$
+myservice                 IN      CNAME   vrrp1
+proxy                     IN      CNAME   vrrp1
+
+$ORIGIN    88.168.192.in-addr.arpa
+@       IN      SOA     . hostmaster.local. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+1       IN      PTR          router.local
+$GENERATE  2-4    IN    PTR    host$.dhcp-static.local
+$GENERATE  5-254    IN    PTR    host$.dhcp-dyn.local
